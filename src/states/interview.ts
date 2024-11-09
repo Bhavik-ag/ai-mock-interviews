@@ -6,7 +6,7 @@ import {
 } from "./types";
 
 export const useInterviewControls = create<InterviewControlsState>((set) => ({
-  isCamOn: false,
+  isCamOn: true,
   isMicOn: false,
   isCaptionOn: false,
 

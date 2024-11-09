@@ -70,8 +70,7 @@ const InterviewView = ({
 
   const [followup, setFollowup] = useState<number>(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-
-  console.log(interview_state, isPlaying, isFinished);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const {
     interimText,
@@ -85,7 +84,7 @@ const InterviewView = ({
   const updateSubmitType = useStore((state: any) => state.updateSubmitType);
   const addMessage = useStore((state: any) => state.addMessage);
   const conversationHistory = useStore(
-    (state: any) => state.conversationHistory,
+    (state: any) => state.conversationHistory
   );
 
   console.log("Conversation History", conversationHistory);
@@ -186,7 +185,7 @@ const InterviewView = ({
   const askFollowup = async () => {
     const response = await getDSAFollowup(
       currentQuestion?.markdown_text || "",
-      code,
+      code
     );
 
     console.log(response);
@@ -211,7 +210,7 @@ const InterviewView = ({
     const handleStart = async () => {
       response = await getAIResponse(
         currentQuestion?.transcript || "",
-        finalText,
+        finalText
       );
 
       addMessage("Interviewer", currentQuestion?.transcript || "");
@@ -225,7 +224,7 @@ const InterviewView = ({
       response = await getQuestionAnswer(
         currentQuestion?.markdown_text || "",
         code,
-        finalText,
+        finalText
       );
 
       addMessage("Candidate", `${finalText}. The current code is: \n ${code}`);
@@ -237,7 +236,7 @@ const InterviewView = ({
     const handleFollowup = async () => {
       response = await getDSAFollowup(
         currentQuestion?.markdown_text || "",
-        code,
+        code
       );
 
       addMessage("Candidate", `${code} before submitting the answer.`);
@@ -248,6 +247,8 @@ const InterviewView = ({
     const handleEnd = () => {
       console.log("Interview Ended");
     };
+
+    setLoading(true);
 
     switch (submitType) {
       case SubmitType.START:
@@ -261,19 +262,19 @@ const InterviewView = ({
         break;
       case SubmitType.END:
         handleEnd();
+        setLoading(false);
         return;
       default:
         console.log("Invalid Submit Type");
         return;
     }
 
-    console.log(response);
-
     addMessage("Interviewer", response);
 
     const newAudio = await getAudio(response);
     setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
     resetFinalText();
+    setLoading(false);
 
     if (!skipOnASK) {
       console.log(followup);
@@ -309,16 +310,18 @@ const InterviewView = ({
 
       <InterviewNav />
       <div className="flex gap-2  z-50 absolute bottom-4 right-4">
-        <Button
+        {/* <Button
           onClick={() => {
             setCodeQuestion((prev) => !prev);
           }}
         >
           Switch Mode
-        </Button>
+        </Button> */}
         <Button onClick={submitAnswer}>Submit Answer</Button>
         {/* <Button onClick={askFollowup}>Ask Followup</Button> */}
-        <Button onClick={askQuestion}>Ask Question</Button>
+        <Button variant="outline" onClick={askQuestion} className="shadow">
+          Ask Question
+        </Button>
 
         <br />
       </div>
@@ -366,7 +369,7 @@ const InterviewView = ({
           "absolute right-4  z-50 flex gap-2 max-w-[90vw]  p-2 rounded-md  transition-all duration-700 -translate-y-1/2 origin-bottom-right",
           !codeQuestion
             ? "right-1/2 translate-x-1/2 top-1/2 bg-transparent"
-            : "flex top-[70vh] scale-[0.4] bg-neutral-200 ",
+            : "flex top-[70vh] scale-[0.4] bg-neutral-200 "
         )}
       >
         {/* <span
