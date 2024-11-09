@@ -6,7 +6,7 @@ export const generateResumeSummary = async (resume: File) => {
   try {
     const text = await extractTextFromPDF(
       resume,
-      "alphanumericwithspaceandpunctuationandnewline"
+      "alphanumericwithspaceandpunctuationandnewline",
     );
     return {
       status: true,
@@ -50,6 +50,20 @@ export const createUserOnboardingDetails = async (data: FormData) => {
   const { error } = await supabaseBrowserClient
     .from("user_details")
     .insert([dataWithoutResume]);
+  if (error) {
+    throw error;
+  }
+  return { success: true };
+};
+
+export const updateConversation = async (
+  conversation: JSON[],
+  interviewId: string,
+) => {
+  const { error } = await supabaseBrowserClient
+    .from("user_interviews")
+    .update({ conversation: conversation })
+    .eq("id", interviewId);
   if (error) {
     throw error;
   }
