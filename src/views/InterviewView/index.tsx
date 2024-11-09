@@ -38,7 +38,6 @@ import { getDSAFollowup } from "@/utils/getDSAFollowup";
 import { getQuestionAnswer } from "@/utils/getQuestionAnswer";
 import useStore from "@/store";
 import { SubmitType } from "@/constants";
-import { boolean } from "zod";
 
 interface InterviewViewProps {
   interview: Interview | null;
@@ -71,8 +70,7 @@ const InterviewView = ({
 
   const [followup, setFollowup] = useState<number>(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-
-  console.log(interview_state, isPlaying, isFinished);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const {
     interimText,
@@ -234,6 +232,8 @@ const InterviewView = ({
       console.log("Interview Ended");
     };
 
+    setLoading(true);
+
     switch (submitType) {
       case SubmitType.START:
         await handleStart();
@@ -246,17 +246,17 @@ const InterviewView = ({
         break;
       case SubmitType.END:
         handleEnd();
+        setLoading(false);
         return;
       default:
         console.log("Invalid Submit Type");
         return;
     }
 
-    console.log(response);
-
     const newAudio = await getAudio(response);
     setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
     resetFinalText();
+    setLoading(false);
 
     if (!skipOnASK) {
       console.log(followup);
@@ -292,16 +292,18 @@ const InterviewView = ({
 
       <InterviewNav />
       <div className="flex gap-2  z-50 absolute bottom-4 right-4">
-        <Button
+        {/* <Button
           onClick={() => {
             setCodeQuestion((prev) => !prev);
           }}
         >
           Switch Mode
-        </Button>
+        </Button> */}
         <Button onClick={submitAnswer}>Submit Answer</Button>
         {/* <Button onClick={askFollowup}>Ask Followup</Button> */}
-        <Button onClick={askQuestion}>Ask Question</Button>
+        <Button variant="outline" onClick={askQuestion} className="shadow">
+          Ask Question
+        </Button>
 
         <br />
       </div>

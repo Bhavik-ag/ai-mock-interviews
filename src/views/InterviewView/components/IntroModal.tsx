@@ -22,54 +22,89 @@ const IntroModal = ({ onClose, scheduledTime }: IntroModalProps) => {
   const audioContext = useRef<AudioContext | null>(null);
   const analyser = useRef<AnalyserNode | null>(null);
   const microphone = useRef<MediaStreamAudioSourceNode | null>(null);
+  const animationFrame = useRef<number>();
+  const mediaStream = useRef<MediaStream | null>(null);
   const webcamRef = useRef<Webcam>(null);
 
   useEffect(() => {
     return () => {
-      if (audioContext.current) {
-        audioContext.current.close();
-      }
+      stopMicrophoneTest();
     };
   }, []);
-
   const testMicrophone = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop any existing audio context and stream
+      await stopMicrophoneTest();
+
+      // Get new media stream with properly typed constraints
+      mediaStream.current = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
+
+      // Create new audio context
       audioContext.current = new (window.AudioContext || window.AudioContext)();
       analyser.current = audioContext.current.createAnalyser();
-      microphone.current = audioContext.current.createMediaStreamSource(stream);
+      analyser.current.fftSize = 1024;
+      analyser.current.smoothingTimeConstant = 0.8;
+
+      microphone.current = audioContext.current.createMediaStreamSource(
+        mediaStream.current
+      );
       microphone.current.connect(analyser.current);
 
       setIsTesting(true);
       setMicPermission(true);
 
       const checkAudioLevel = () => {
-        if (!analyser.current) return;
+        if (!analyser.current || !isTesting) return;
+
         const dataArray = new Uint8Array(analyser.current.frequencyBinCount);
         analyser.current.getByteFrequencyData(dataArray);
-        const average =
-          dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
-        setMicLevel(average);
 
-        if (isTesting) {
-          requestAnimationFrame(checkAudioLevel);
-        }
+        // Calculate RMS value for more accurate level measurement
+        const rms = Math.sqrt(
+          dataArray.reduce((acc, val) => acc + val * val, 0) / dataArray.length
+        );
+
+        // Normalize and smooth the value
+        const normalizedLevel = Math.min(Math.round((rms / 128) * 100), 100);
+        setMicLevel(normalizedLevel);
+
+        animationFrame.current = requestAnimationFrame(checkAudioLevel);
       };
 
       checkAudioLevel();
     } catch (error) {
       console.error("Error accessing microphone:", error);
+      setMicPermission(false);
     }
   };
-
-  const stopMicrophoneTest = () => {
+  const stopMicrophoneTest = async () => {
     setIsTesting(false);
+
+    if (animationFrame.current) {
+      cancelAnimationFrame(animationFrame.current);
+    }
+
     if (microphone.current) {
       microphone.current.disconnect();
+      microphone.current = null;
     }
+
     if (audioContext.current) {
-      audioContext.current.close();
+      await audioContext.current.close();
+      audioContext.current = null;
     }
+
+    if (mediaStream.current) {
+      mediaStream.current.getTracks().forEach((track) => track.stop());
+      mediaStream.current = null;
+    }
+
+    setMicLevel(0);
   };
 
   const checkWebcamQuality = () => {
@@ -93,38 +128,20 @@ const IntroModal = ({ onClose, scheduledTime }: IntroModalProps) => {
       content: (
         <div>
           <p>Here are some instructions for your interview:</p> <br />
-          <ul className=" list-decimal list-inside">
+          <ul className="list-decimal list-inside">
             <li>Prepare a quiet environment</li>
             <li>Test your microphone and webcam</li>
             <li>Have a notepad ready for any notes</li>
+            <li className="text-red-500">
+              <strong>
+                Once you are done answering you can click submit button to move
+                to next question.
+              </strong>
+            </li>
           </ul>
         </div>
       ),
     },
-    {
-      title: "Permissions",
-      content: (
-        <div className="space-y-4">
-          <div>
-            <Button
-              onClick={() => setMicPermission(true)}
-              disabled={micPermission}
-            >
-              {micPermission ? "Microphone Allowed" : "Allow Microphone"}
-            </Button>
-          </div>
-          <div>
-            <Button
-              onClick={() => setWebcamPermission(true)}
-              disabled={webcamPermission}
-            >
-              {webcamPermission ? "Webcam Allowed" : "Allow Webcam"}
-            </Button>
-          </div>
-        </div>
-      ),
-    },
-
     {
       title: "Test Audio and Video",
       content: (
@@ -135,10 +152,10 @@ const IntroModal = ({ onClose, scheduledTime }: IntroModalProps) => {
               <Button onClick={isTesting ? stopMicrophoneTest : testMicrophone}>
                 {isTesting ? "Stop Test" : "Test Microphone"}
               </Button>
-              <div className="w-48 h-4 bg-gray-200 rounded">
+              <div className="w-48 h-4 bg-gray-200 rounded overflow-hidden">
                 <div
-                  className="h-full bg-green-500 rounded"
-                  style={{ width: `${(micLevel / 255) * 100}%` }}
+                  className="h-full bg-green-500 rounded transition-all duration-100"
+                  style={{ width: `${micLevel}%` }}
                 ></div>
               </div>
             </div>
@@ -172,9 +189,6 @@ const IntroModal = ({ onClose, scheduledTime }: IntroModalProps) => {
       content: (
         <div>
           <p>Are you ready to begin the interview?</p>
-          <Button onClick={onClose} className="mt-4">
-            Start Interview
-          </Button>
         </div>
       ),
     },
@@ -187,7 +201,7 @@ const IntroModal = ({ onClose, scheduledTime }: IntroModalProps) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]">
       {startInterview || scheduledTime == null ? (
-        <div className="bg-white p-10 min-w-[560px]  flex flex-col justify-between min-h-[320px]  rounded-lg w-full max-w-md">
+        <div className="bg-white p-10 min-w-[560px] flex flex-col justify-between min-h-[320px] rounded-lg w-full max-w-md">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSection}
@@ -219,9 +233,18 @@ const IntroModal = ({ onClose, scheduledTime }: IntroModalProps) => {
             <button
               className="text-sm flex gap-2 items-center"
               onClick={nextSection}
-              disabled={currentSection === sections.length - 1}
             >
-              Next <ChevronRight size={12} strokeWidth={1.2} />
+              {currentSection === sections.length - 1 ? (
+                <>
+                  <Button onClick={onClose} className="mt-4">
+                    Start Interview
+                  </Button>
+                </>
+              ) : (
+                <>
+                  Next <ChevronRight size={12} strokeWidth={1.2} />
+                </>
+              )}
             </button>
           </div>
         </div>
