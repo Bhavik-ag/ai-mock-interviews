@@ -38,7 +38,6 @@ import { getDSAFollowup } from "@/utils/getDSAFollowup";
 import { getQuestionAnswer } from "@/utils/getQuestionAnswer";
 import useStore from "@/store";
 import { SubmitType } from "@/constants";
-import { boolean } from "zod";
 
 interface InterviewViewProps {
   interview: Interview | null;
@@ -84,7 +83,12 @@ const InterviewView = ({
 
   const submitType = useStore((state: any) => state.submitType);
   const updateSubmitType = useStore((state: any) => state.updateSubmitType);
+  const addMessage = useStore((state: any) => state.addMessage);
+  const conversationHistory = useStore(
+    (state: any) => state.conversationHistory,
+  );
 
+  console.log("Conversation History", conversationHistory);
   console.log(submitType);
 
   useEffect(() => {
@@ -182,7 +186,7 @@ const InterviewView = ({
   const askFollowup = async () => {
     const response = await getDSAFollowup(
       currentQuestion?.markdown_text || "",
-      code
+      code,
     );
 
     console.log(response);
@@ -207,8 +211,13 @@ const InterviewView = ({
     const handleStart = async () => {
       response = await getAIResponse(
         currentQuestion?.transcript || "",
-        finalText
+        finalText,
       );
+
+      addMessage("Interviewer", currentQuestion?.transcript || "");
+
+      addMessage("Candidate", finalText);
+
       updateSubmitType(SubmitType.FOLLOWUP);
     };
 
@@ -216,8 +225,11 @@ const InterviewView = ({
       response = await getQuestionAnswer(
         currentQuestion?.markdown_text || "",
         code,
-        finalText
+        finalText,
       );
+
+      addMessage("Candidate", `${finalText}. The current code is: \n ${code}`);
+
       skipOnASK = true;
       updateSubmitType(SubmitType.FOLLOWUP);
     };
@@ -225,8 +237,11 @@ const InterviewView = ({
     const handleFollowup = async () => {
       response = await getDSAFollowup(
         currentQuestion?.markdown_text || "",
-        code
+        code,
       );
+
+      addMessage("Candidate", `${code} before submitting the answer.`);
+
       updateSubmitType(SubmitType.END);
     };
 
@@ -253,6 +268,8 @@ const InterviewView = ({
     }
 
     console.log(response);
+
+    addMessage("Interviewer", response);
 
     const newAudio = await getAudio(response);
     setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
@@ -349,7 +366,7 @@ const InterviewView = ({
           "absolute right-4  z-50 flex gap-2 max-w-[90vw]  p-2 rounded-md  transition-all duration-700 -translate-y-1/2 origin-bottom-right",
           !codeQuestion
             ? "right-1/2 translate-x-1/2 top-1/2 bg-transparent"
-            : "flex top-[70vh] scale-[0.4] bg-neutral-200 "
+            : "flex top-[70vh] scale-[0.4] bg-neutral-200 ",
         )}
       >
         {/* <span
