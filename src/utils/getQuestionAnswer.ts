@@ -1,10 +1,15 @@
-export const  getAIResponse = async (question: string, raw_answer: string) => {
+export const getQuestionAnswer = async (
+  question: string,
+  code: string,
+  candidateQuery: string
+) => {
   const response = await fetch("/api/chat", {
     method: "POST",
     body: JSON.stringify({
       question: question,
-      raw_answer: raw_answer,
-      type: "ai_response",
+      code: code,
+      type: "answer_question",
+      candidateQuery: candidateQuery,
     }),
   });
 

@@ -35,7 +35,10 @@ import { getQuestionAudio } from "@/utils/getQuestionAudio";
 import { getAIResponse } from "@/utils/getAIResponse";
 import { getAudio } from "@/utils/getAudio";
 import { getDSAFollowup } from "@/utils/getDSAFollowup";
-import { AIInterviewer } from "./components/AIInterviewer";
+import { getQuestionAnswer } from "@/utils/getQuestionAnswer";
+import useStore from "@/store";
+import { SubmitType } from "@/constants";
+import { boolean } from "zod";
 
 interface InterviewViewProps {
   interview: Interview | null;
@@ -69,20 +72,20 @@ const InterviewView = ({
   const [followup, setFollowup] = useState<number>(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
 
-  const [interviewerState, setInterviewerState] = useState<
-    "idle" | "listening" | "thinking" | "speaking"
-  >("idle");
-
   console.log(interview_state, isPlaying, isFinished);
 
   const {
     interimText,
     startListening,
     stopListening,
-    isListening,
     finalText,
     resetFinalText,
   } = useSpeechToText();
+
+  const submitType = useStore((state: any) => state.submitType);
+  const updateSubmitType = useStore((state: any) => state.updateSubmitType);
+
+  console.log(submitType);
 
   useEffect(() => {
     if (!interviewStarted || !currentAudio) return;
@@ -114,16 +117,6 @@ const InterviewView = ({
       quesAudio.currentTime = 0;
     };
   }, [interviewStarted, currentAudio]);
-
-  useEffect(() => {
-    if (isPlaying) {
-      setInterviewerState("speaking");
-    } else if (isListening) {
-      setInterviewerState("listening");
-    } else {
-      setInterviewerState("idle");
-    }
-  }, [isPlaying, isListening, isFinished]);
 
   useEffect(() => {
     if (isMicOn) {
@@ -199,32 +192,85 @@ const InterviewView = ({
     setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
   };
 
-  const submitAnswer = async () => {
-    console.log(finalText);
+  const askQuestion = async () => {
+    updateSubmitType(SubmitType.ASK);
+    if (!isMicOn) {
+      toggleMicrophone();
+    }
+    console.log("Asking Question", finalText);
+  };
 
-    const response = await getAIResponse(
-      currentQuestion?.transcript || "",
-      finalText
-    );
+  const submitAnswer = async () => {
+    let response = "";
+    let skipOnASK = false;
+
+    const handleStart = async () => {
+      response = await getAIResponse(
+        currentQuestion?.transcript || "",
+        finalText
+      );
+      updateSubmitType(SubmitType.FOLLOWUP);
+    };
+
+    const handleAsk = async () => {
+      response = await getQuestionAnswer(
+        currentQuestion?.markdown_text || "",
+        code,
+        finalText
+      );
+      skipOnASK = true;
+      updateSubmitType(SubmitType.FOLLOWUP);
+    };
+
+    const handleFollowup = async () => {
+      response = await getDSAFollowup(
+        currentQuestion?.markdown_text || "",
+        code
+      );
+      updateSubmitType(SubmitType.END);
+    };
+
+    const handleEnd = () => {
+      console.log("Interview Ended");
+    };
+
+    switch (submitType) {
+      case SubmitType.START:
+        await handleStart();
+        break;
+      case SubmitType.ASK:
+        await handleAsk();
+        break;
+      case SubmitType.FOLLOWUP:
+        await handleFollowup();
+        break;
+      case SubmitType.END:
+        handleEnd();
+        return;
+      default:
+        console.log("Invalid Submit Type");
+        return;
+    }
 
     console.log(response);
 
     const newAudio = await getAudio(response);
-
     setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
-
     resetFinalText();
 
-    console.log(followup);
-    console.log(currentQuestion?.no_of_followups || 0);
+    if (!skipOnASK) {
+      console.log(followup);
+      console.log(currentQuestion?.no_of_followups || 0);
 
-    setTimeout(() => {
-      if (followup !== 0) {
-        setFollowup((prev) => prev - 1);
-      } else {
-        setCurrentQuestionIndex((prev) => prev + 1);
-      }
-    }, 5000);
+      setTimeout(() => {
+        if (followup !== 0) {
+          setFollowup((prev) => prev - 1);
+        } else {
+          setCurrentQuestionIndex((prev) => prev + 1);
+          updateSubmitType(SubmitType.END);
+        }
+      }, 5000);
+    }
   };
 
   const handleCodeChange = (value: string | undefined) => {
@@ -254,7 +300,8 @@ const InterviewView = ({
           Switch Mode
         </Button>
         <Button onClick={submitAnswer}>Submit Answer</Button>
-        <Button onClick={askFollowup}>Ask Followup</Button>
+        {/* <Button onClick={askFollowup}>Ask Followup</Button> */}
+        <Button onClick={askQuestion}>Ask Question</Button>
 
         <br />
       </div>
@@ -316,9 +363,7 @@ const InterviewView = ({
           image={
             "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YXZhdGFyfGVufDB8fDB8fHww"
           }
-        >
-          <AIInterviewer state={interviewerState} />
-        </InterviewParticipantBlock>
+        />
 
         <InterviewParticipantBlock
           name="John Doe"
