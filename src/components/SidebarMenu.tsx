@@ -18,7 +18,7 @@ export const menuList = [
   {
     icon: UserRound,
     title: "Profile",
-    href: "/my-profile",
+    href: "/profile",
   },
   {
     icon: Bolt,

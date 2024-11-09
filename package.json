@@ -46,10 +46,10 @@
     "react-webcam": "^7.2.0",
     "recharts": "^2.12.7",
     "regenerator-runtime": "^0.14.1",
+    "resend": "^4.0.1-alpha.0",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "web-audio-api": "^0.2.2",
-    "resend": "^4.0.1-alpha.0",
     "zod": "^3.23.8",
     "zustand": "^4.5.4"
   },
