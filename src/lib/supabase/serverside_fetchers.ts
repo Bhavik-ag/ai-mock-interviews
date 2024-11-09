@@ -172,3 +172,17 @@ export const getInterviewDetails = async (userId: string | undefined) => {
 
   return interviewDetails;
 };
+
+export const getInterviewsSnap = async (userId: string) => {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("interview_snap")
+    .select("*")
+    .eq("user_id", userId);
+  if (error) {
+    console.error("Error fetching interview snap:", error);
+    return null;
+  }
+
+  return data;
+};
