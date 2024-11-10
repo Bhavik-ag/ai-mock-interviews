@@ -38,6 +38,7 @@ import { getDSAFollowup } from "@/utils/getDSAFollowup";
 import { getQuestionAnswer } from "@/utils/getQuestionAnswer";
 import useStore from "@/store";
 import { SubmitType } from "@/constants";
+import { updateConversation } from "@/lib/supabase/fetchers";
 
 interface InterviewViewProps {
   interview: Interview | null;
@@ -245,9 +246,19 @@ const InterviewView = ({
     const handleEnd = async () => {
       setCodeQuestion((prev) => !prev);
       response = "Thank you for your time. Have a great day!";
+
+      // Final update in conversation
+      addMessage("Candidate", finalText);
+      addMessage("Interviewer", response);
+
       const newAudio = await getAudio(response);
       setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
       resetFinalText();
+
+      // Get the conversation history and update the database
+      if(user_interview){
+        updateConversation(conversationHistory, user_interview?.id);
+      }
     };
 
     const handleQuestionChange = async () => {

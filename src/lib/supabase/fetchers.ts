@@ -58,7 +58,7 @@ export const createUserOnboardingDetails = async (data: FormData) => {
 
 export const updateConversation = async (
   conversation: JSON[],
-  interviewId: string,
+  interviewId: number,
 ) => {
   const { error } = await supabaseBrowserClient
     .from("user_interviews")
