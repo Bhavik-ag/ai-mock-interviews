@@ -240,7 +240,6 @@ const InterviewView = ({
       );
 
       addMessage("Candidate", `${code} before submitting the answer.`);
-
     };
 
     const handleEnd = async () => {
@@ -256,13 +255,14 @@ const InterviewView = ({
       resetFinalText();
 
       // Get the conversation history and update the database
-      if(user_interview){
+      if (user_interview) {
         updateConversation(conversationHistory, user_interview?.id);
       }
     };
 
     const handleQuestionChange = async () => {
-      response = "That's a great answer. Let's move on to the next question.";
+      response =
+        "That was a well-thought-out answer, and you explained your overall approach very clearly. Let us smoothly transition to the next question and see how you tackle it.";
       updateSubmitType(SubmitType.FOLLOWUP);
     };
 
@@ -300,7 +300,7 @@ const InterviewView = ({
     if (!skipOnASK) {
       console.log(followup);
       console.log(currentQuestion?.no_of_followups || 0);
-    
+
       setTimeout(() => {
         if (followup != 0) {
           setFollowup((prev) => prev - 1);
@@ -317,8 +317,7 @@ const InterviewView = ({
   useEffect(() => {
     if (followup === 0 && currentQuestionIndex == 2) {
       updateSubmitType(SubmitType.END);
-    }
-    else if (followup === 0 && currentQuestionIndex == 1) {
+    } else if (followup === 0 && currentQuestionIndex == 1) {
       updateSubmitType(SubmitType.NEXT);
     }
   }, [followup]);
@@ -358,7 +357,6 @@ const InterviewView = ({
         <br />
       </div>
 
-      {/* ---------- question && editor --------- */}
       {codeQuestion && (
         <div className="min-h-screen py-14 flex">
           {" "}
@@ -411,7 +409,7 @@ const InterviewView = ({
           <GripHorizontal />
         </span> */}
         <InterviewParticipantBlock
-          name="Anne Doherty"
+          name="Fleqo AI"
           image={
             "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YXZhdGFyfGVufDB8fDB8fHww"
           }

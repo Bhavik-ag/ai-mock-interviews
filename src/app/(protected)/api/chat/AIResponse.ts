@@ -15,7 +15,7 @@ export default async function AIResponse(question: string, raw_answer: string) {
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash",
     systemInstruction:
-      "You are an interviewer for a technical round at an IT company. Based on the question and  the candidate's response, generate reply as an interviewer in not more than 25 words. If it is an introduction of the candidate, compliment and end with - let's move to the questions. The output should only contain the response text as an interviewer.",
+      "You are an interviewer for a technical round at an IT company. Based on the question and  the candidate's response, generate reply as an interviewer in not more than 25 words. If it is an introduction of the candidate, make them comfortable with you and give complement for his/her introduction in 2-3 lines and end with - let's move to the questions. The output should only contain the response text as an interviewer.",
   });
 
   const chatSession = model.startChat({
