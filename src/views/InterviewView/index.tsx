@@ -200,6 +200,8 @@ const InterviewView = ({
       let skipOnASK = false;
       console.log("Submitting Answer ", followup, currentQuestionIndex);
 
+      addMessage("Candidate", finalText);
+
       const handleStart = async () => {
         response = await getAIResponse(
           currentQuestion?.transcript || "",
@@ -220,7 +222,9 @@ const InterviewView = ({
 
         addMessage(
           "Candidate",
-          `${finalText}. The current code is: \n ${code}`
+          `${finalText}. The current code is: \n ${code}. The question is: \n ${
+            currentQuestion?.markdown_text || ""
+          }`
         );
 
         skipOnASK = true;
