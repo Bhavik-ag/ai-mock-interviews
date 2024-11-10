@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import MarkdownPreview from "@uiw/react-markdown-preview";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 import Editor from "@monaco-editor/react";
 import Webcam from "react-webcam";
@@ -54,6 +55,8 @@ const InterviewView = ({
   interview_questions,
 }: InterviewViewProps) => {
   const [interviewStarted, setInterviewStarted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isAsking, setIsAsking] = useState<boolean>(false);
 
   const [codeQuestion, setCodeQuestion] = useState<boolean>(false);
   const [code, setCode] = useState<string>("");
@@ -87,9 +90,6 @@ const InterviewView = ({
   const conversationHistory = useStore(
     (state: any) => state.conversationHistory
   );
-
-  console.log("Conversation History", conversationHistory);
-  console.log(submitType);
 
   useEffect(() => {
     if (!interviewStarted || !currentAudio) return;
@@ -167,20 +167,6 @@ const InterviewView = ({
     }, 2000);
   }, [currentQuestion]);
 
-  // useEffect(() => {
-  //   console.log("Followup puchega");
-  //     console.log(followup);
-  //     if (currentQuestion?.type === "dsa") {
-  //       askFollowup()
-  //         .then(() => {
-  //           console.log("Followup asked");
-  //         })
-  //         .catch(() => {
-  //           console.log("Error in asking followup");
-  //         });
-  //     }
-  // }, [followup]);
-
   const askFollowup = async () => {
     const response = await getDSAFollowup(
       currentQuestion?.markdown_text || "",
@@ -195,122 +181,131 @@ const InterviewView = ({
   };
 
   const askQuestion = async () => {
-    updateSubmitType(SubmitType.ASK);
-    if (!isMicOn) {
-      toggleMicrophone();
+    try {
+      setIsAsking(true);
+      updateSubmitType(SubmitType.ASK);
+      if (!isMicOn) {
+        toggleMicrophone();
+      }
+      console.log("Asking Question", finalText);
+    } finally {
+      setIsAsking(false);
     }
-    console.log("Asking Question", finalText);
   };
 
   const submitAnswer = async () => {
-    let response = "";
-    let skipOnASK = false;
-    console.log("Submitting Answer ", followup, currentQuestionIndex);
+    try {
+      setIsSubmitting(true);
+      let response = "";
+      let skipOnASK = false;
+      console.log("Submitting Answer ", followup, currentQuestionIndex);
 
-    const handleStart = async () => {
-      response = await getAIResponse(
-        currentQuestion?.transcript || "",
-        finalText
-      );
+      const handleStart = async () => {
+        response = await getAIResponse(
+          currentQuestion?.transcript || "",
+          finalText
+        );
 
-      addMessage("Interviewer", currentQuestion?.transcript || "");
+        addMessage("Interviewer", currentQuestion?.transcript || "");
+        addMessage("Candidate", finalText);
+        updateSubmitType(SubmitType.FOLLOWUP);
+      };
 
-      addMessage("Candidate", finalText);
+      const handleAsk = async () => {
+        response = await getQuestionAnswer(
+          currentQuestion?.markdown_text || "",
+          code,
+          finalText
+        );
 
-      updateSubmitType(SubmitType.FOLLOWUP);
-    };
+        addMessage(
+          "Candidate",
+          `${finalText}. The current code is: \n ${code}`
+        );
 
-    const handleAsk = async () => {
-      response = await getQuestionAnswer(
-        currentQuestion?.markdown_text || "",
-        code,
-        finalText
-      );
+        skipOnASK = true;
+        updateSubmitType(SubmitType.FOLLOWUP);
+      };
 
-      addMessage("Candidate", `${finalText}. The current code is: \n ${code}`);
+      const handleFollowup = async () => {
+        response = await getDSAFollowup(
+          currentQuestion?.markdown_text || "",
+          code
+        );
 
-      skipOnASK = true;
-      updateSubmitType(SubmitType.FOLLOWUP);
-    };
+        addMessage("Candidate", `${code} before submitting the answer.`);
+      };
 
-    const handleFollowup = async () => {
-      response = await getDSAFollowup(
-        currentQuestion?.markdown_text || "",
-        code
-      );
+      const handleEnd = async () => {
+        setCodeQuestion((prev) => !prev);
+        response = "Thank you for your time. Have a great day!";
 
-      addMessage("Candidate", `${code} before submitting the answer.`);
-    };
+        addMessage("Candidate", finalText);
+        addMessage("Interviewer", response);
 
-    const handleEnd = async () => {
-      setCodeQuestion((prev) => !prev);
-      response = "Thank you for your time. Have a great day!";
+        const newAudio = await getAudio(response);
+        setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
+        resetFinalText();
 
-      // Final update in conversation
-      addMessage("Candidate", finalText);
+        if (user_interview) {
+          updateConversation(conversationHistory, user_interview?.id);
+        }
+      };
+
+      const handleQuestionChange = async () => {
+        response =
+          "That was a well-thought-out answer, and you explained your overall approach very clearly. Let us smoothly transition to the next question and see how you tackle it.";
+        updateSubmitType(SubmitType.FOLLOWUP);
+      };
+
+      setLoading(true);
+
+      switch (submitType) {
+        case SubmitType.START:
+          await handleStart();
+          break;
+        case SubmitType.ASK:
+          await handleAsk();
+          break;
+        case SubmitType.FOLLOWUP:
+          await handleFollowup();
+          break;
+        case SubmitType.END:
+          handleEnd();
+          setLoading(false);
+          return;
+        case SubmitType.NEXT:
+          await handleQuestionChange();
+          break;
+        default:
+          console.log("Invalid Submit Type");
+          return;
+      }
+
       addMessage("Interviewer", response);
 
       const newAudio = await getAudio(response);
       setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
       resetFinalText();
+      setLoading(false);
 
-      // Get the conversation history and update the database
-      if (user_interview) {
-        updateConversation(conversationHistory, user_interview?.id);
-      }
-    };
+      if (!skipOnASK) {
+        console.log(followup);
+        console.log(currentQuestion?.no_of_followups || 0);
 
-    const handleQuestionChange = async () => {
-      response =
-        "That was a well-thought-out answer, and you explained your overall approach very clearly. Let us smoothly transition to the next question and see how you tackle it.";
-      updateSubmitType(SubmitType.FOLLOWUP);
-    };
-
-    setLoading(true);
-
-    switch (submitType) {
-      case SubmitType.START:
-        await handleStart();
-        break;
-      case SubmitType.ASK:
-        await handleAsk();
-        break;
-      case SubmitType.FOLLOWUP:
-        await handleFollowup();
-        break;
-      case SubmitType.END:
-        handleEnd();
-        setLoading(false);
-        return;
-      case SubmitType.NEXT:
-        await handleQuestionChange();
-        break;
-      default:
-        console.log("Invalid Submit Type");
-        return;
-    }
-
-    addMessage("Interviewer", response);
-
-    const newAudio = await getAudio(response);
-    setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
-    resetFinalText();
-    setLoading(false);
-
-    if (!skipOnASK) {
-      console.log(followup);
-      console.log(currentQuestion?.no_of_followups || 0);
-
-      setTimeout(() => {
-        if (followup != 0) {
-          setFollowup((prev) => prev - 1);
-        } else {
-          if (currentQuestionIndex < 2) {
-            setCurrentQuestionIndex((prev) => prev + 1);
-            setCode("");
+        setTimeout(() => {
+          if (followup != 0) {
+            setFollowup((prev) => prev - 1);
+          } else {
+            if (currentQuestionIndex < 2) {
+              setCurrentQuestionIndex((prev) => prev + 1);
+              setCode("");
+            }
           }
-        }
-      }, 5000); // 5 seconds timeout
+        }, 5000);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -340,27 +335,40 @@ const InterviewView = ({
       )}
 
       <InterviewNav />
-      <div className="flex gap-2  z-50 absolute bottom-4 right-4">
-        {/* <Button
-          onClick={() => {
-            setCodeQuestion((prev) => !prev);
-          }}
+      <div className="flex gap-2 z-50 absolute bottom-4 right-4">
+        <Button
+          onClick={submitAnswer}
+          disabled={isSubmitting}
+          className="min-w-[120px]"
         >
-          Switch Mode
-        </Button> */}
-        <Button onClick={submitAnswer}>Submit Answer</Button>
-        {/* <Button onClick={askFollowup}>Ask Followup</Button> */}
-        <Button variant="outline" onClick={askQuestion} className="shadow">
-          Ask Question
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            "Submit Answer"
+          )}
         </Button>
-
-        <br />
+        <Button
+          variant="outline"
+          onClick={askQuestion}
+          disabled={isAsking}
+          className="shadow min-w-[120px]"
+        >
+          {isAsking ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Asking...
+            </>
+          ) : (
+            "Ask Question"
+          )}
+        </Button>
       </div>
 
       {codeQuestion && (
         <div className="min-h-screen py-14 flex">
-          {" "}
-          {/* Question Section */}
           <div className="w-1/2 p-6 overflow-y-auto">
             <MarkdownPreview
               className="!bg-transparent"
@@ -368,7 +376,6 @@ const InterviewView = ({
               wrapperElement={{ "data-color-mode": "light" }}
             />
           </div>
-          {/* Code Editor Section */}
           <div className="w-1/2 h-[84vh] bg-white">
             <div className="flex justify-end py-2">
               <Select value={language} onValueChange={setLanguage}>
@@ -393,7 +400,6 @@ const InterviewView = ({
           </div>
         </div>
       )}
-      {/* ----------------------------------------------- */}
       <div
         className={cn(
           "absolute right-4  z-50 flex gap-2 max-w-[90vw]  p-2 rounded-md  transition-all duration-700 -translate-y-1/2 origin-bottom-right",
@@ -402,12 +408,6 @@ const InterviewView = ({
             : "flex top-[70vh] scale-[0.4] bg-neutral-200 "
         )}
       >
-        {/* <span
-          id="drag-video"
-          className="rounded-sm  hover:bg-neutral-300  cursor-grab left-0 flex items-center justify-center bg-neutral-200 w-8 h-8"
-        >
-          <GripHorizontal />
-        </span> */}
         <InterviewParticipantBlock
           name="Fleqo AI"
           image={
@@ -424,7 +424,7 @@ const InterviewView = ({
           {isCamOn && <Webcam width={"100%"} />}
         </InterviewParticipantBlock>
 
-        <div className="absolute  right-1/4  translate-x-1/2 bottom-12 rounded-md px-2 bg-black/40 text-white max-w-[460px]">
+        <div className="absolute right-1/4 translate-x-1/2 bottom-12 rounded-md px-2 bg-black/40 text-white max-w-[460px]">
           {isCaptionOn && <p className="text-lg">{interimText}</p>}
         </div>
       </div>
