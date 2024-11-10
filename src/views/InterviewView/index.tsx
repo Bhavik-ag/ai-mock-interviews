@@ -249,6 +249,13 @@ const InterviewView = ({
 
         if (user_interview) {
           updateConversation(conversationHistory, user_interview?.id);
+          fetch("/interview-results", {
+            method: "POST",
+            body: JSON.stringify({
+              interview_id: user_interview?.id,
+              chat: conversationHistory,
+            }),
+          });
         }
       };
 
