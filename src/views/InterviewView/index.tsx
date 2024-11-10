@@ -166,21 +166,19 @@ const InterviewView = ({
     }, 2000);
   }, [currentQuestion]);
 
-  useEffect(() => {
-    console.log("Followup puchega");
-    setTimeout(() => {
-      console.log(followup);
-      if (currentQuestion?.type === "dsa") {
-        askFollowup()
-          .then(() => {
-            console.log("Followup asked");
-          })
-          .catch(() => {
-            console.log("Error in asking followup");
-          });
-      }
-    }, 60000);
-  }, [followup]);
+  // useEffect(() => {
+  //   console.log("Followup puchega");
+  //     console.log(followup);
+  //     if (currentQuestion?.type === "dsa") {
+  //       askFollowup()
+  //         .then(() => {
+  //           console.log("Followup asked");
+  //         })
+  //         .catch(() => {
+  //           console.log("Error in asking followup");
+  //         });
+  //     }
+  // }, [followup]);
 
   const askFollowup = async () => {
     const response = await getDSAFollowup(
@@ -206,6 +204,7 @@ const InterviewView = ({
   const submitAnswer = async () => {
     let response = "";
     let skipOnASK = false;
+    console.log("Submitting Answer ", followup, currentQuestionIndex);
 
     const handleStart = async () => {
       response = await getAIResponse(
@@ -241,11 +240,19 @@ const InterviewView = ({
 
       addMessage("Candidate", `${code} before submitting the answer.`);
 
-      updateSubmitType(SubmitType.END);
     };
 
-    const handleEnd = () => {
-      console.log("Interview Ended");
+    const handleEnd = async () => {
+      setCodeQuestion((prev) => !prev);
+      response = "Thank you for your time. Have a great day!";
+      const newAudio = await getAudio(response);
+      setCurrentAudio(`data:audio/wav;base64,${newAudio.audioContent}`);
+      resetFinalText();
+    };
+
+    const handleQuestionChange = async () => {
+      response = "That's a great answer. Let's move on to the next question.";
+      updateSubmitType(SubmitType.FOLLOWUP);
     };
 
     setLoading(true);
@@ -264,6 +271,9 @@ const InterviewView = ({
         handleEnd();
         setLoading(false);
         return;
+      case SubmitType.NEXT:
+        await handleQuestionChange();
+        break;
       default:
         console.log("Invalid Submit Type");
         return;
@@ -279,17 +289,28 @@ const InterviewView = ({
     if (!skipOnASK) {
       console.log(followup);
       console.log(currentQuestion?.no_of_followups || 0);
-
+    
       setTimeout(() => {
-        if (followup !== 0) {
+        if (followup != 0) {
           setFollowup((prev) => prev - 1);
         } else {
-          setCurrentQuestionIndex((prev) => prev + 1);
-          updateSubmitType(SubmitType.END);
+          if (currentQuestionIndex < 2) {
+            setCurrentQuestionIndex((prev) => prev + 1);
+            setCode("");
+          }
         }
-      }, 5000);
+      }, 5000); // 5 seconds timeout
     }
   };
+
+  useEffect(() => {
+    if (followup === 0 && currentQuestionIndex == 2) {
+      updateSubmitType(SubmitType.END);
+    }
+    else if (followup === 0 && currentQuestionIndex == 1) {
+      updateSubmitType(SubmitType.NEXT);
+    }
+  }, [followup]);
 
   const handleCodeChange = (value: string | undefined) => {
     setCode(value || "");
