@@ -1,3 +1,4 @@
+import { Json } from "@/app/database.types";
 import supabaseBrowserClient from "@/lib/supabase/client";
 import { FormData } from "@/views/OnboardingView/types";
 import extractTextFromPDF from "pdf-parser-client-side";
@@ -6,7 +7,7 @@ export const generateResumeSummary = async (resume: File) => {
   try {
     const text = await extractTextFromPDF(
       resume,
-      "alphanumericwithspaceandpunctuationandnewline",
+      "alphanumericwithspaceandpunctuationandnewline"
     );
     return {
       status: true,
@@ -57,8 +58,8 @@ export const createUserOnboardingDetails = async (data: FormData) => {
 };
 
 export const updateConversation = async (
-  conversation: JSON[],
-  interviewId: number,
+  conversation: Json[],
+  interviewId: number
 ) => {
   const { error } = await supabaseBrowserClient
     .from("user_interviews")
