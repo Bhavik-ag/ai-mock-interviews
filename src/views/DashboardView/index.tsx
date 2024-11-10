@@ -171,7 +171,13 @@ const DashboardView = async () => {
                           </span>
                         ))}
                       </div>
-                      <Button className="w-full">Join Interview</Button>
+                      <Button className="w-full" asChild>
+                        <a
+                          href={`/interview/${interview.slug}?id=${interview.id}`}
+                        >
+                          Join Interview
+                        </a>
+                      </Button>
                     </div>
                   </div>
                 ))}
