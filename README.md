@@ -1,36 +1,15 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+## The problem Fleqo - AI Mock Interview solves
 
-## Getting Started
+Preparing for tech interviews can be challenging, especially for candidates who lack access to experienced interviewers for mock practice. To address this, we’ve developed an AI-powered mock interview platform that provides a realistic, interactive interview experience for anyone preparing for technical roles.
 
-First, run the development server:
+Our platform enables users to take AI-driven mock online programming (MOP) interviews in a setting that closely mirrors real interviews. Equipped with an integrated coding environment, candidates can write code, test solutions, and receive immediate feedback. The AI evaluates not only the correctness of code but also analyzes approach, efficiency, and style, offering detailed feedback to guide improvement.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+What makes our platform unique is its ability to dynamically ask follow-up questions based on the candidate’s responses and coding style. If, for example, a candidate’s solution is correct but lacks optimization, the AI prompts them to consider more efficient methods. The system adapts its questioning to encourage deeper thinking, helping candidates refine both their technical and problem-solving skills.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Beyond code assessment, our platform includes behavioral questions that help candidates practice communicating their thought process, articulating trade-offs, and handling interview dynamics. This prepares them for the full scope of technical interviews, encompassing both problem-solving and soft skills.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Our platform democratizes access to high-quality interview practice, providing candidates with a comprehensive preparation tool to build confidence, improve skills, and succeed in their career journeys.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+### Screenshots
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+![image](https://github.com/user-attachments/assets/d08f37df-0964-4537-8004-610661c7cbd5)
